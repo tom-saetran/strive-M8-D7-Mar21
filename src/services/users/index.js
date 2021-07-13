@@ -2,7 +2,7 @@ import q2m from "query-to-mongo"
 import express from "express"
 import UserModel from "./schema.js"
 import { basicAuthMiddleware } from "../../auth/basic.js"
-import { checkEditPrivileges } from "../../auth/admin.js"
+import { checkUserEditPrivileges } from "../../auth/admin.js"
 import { UserValidator } from "./validator.js"
 
 const usersRouter = express.Router()
@@ -99,7 +99,7 @@ usersRouter.get("/:id/stories", basicAuthMiddleware, async (req, res, next) => {
     }
 })
 
-usersRouter.delete("/:id", basicAuthMiddleware, checkEditPrivileges, async (req, res, next) => {
+usersRouter.delete("/:id", basicAuthMiddleware, checkUserEditPrivileges, async (req, res, next) => {
     try {
         let result
         if (!isValidObjectId(req.params.id)) next(createError(400, `ID ${req.params.id} is invalid`))
@@ -112,7 +112,7 @@ usersRouter.delete("/:id", basicAuthMiddleware, checkEditPrivileges, async (req,
     }
 })
 
-usersRouter.put("/:id", basicAuthMiddleware, checkEditPrivileges, async (req, res, next) => {
+usersRouter.put("/:id", basicAuthMiddleware, checkUserEditPrivileges, async (req, res, next) => {
     try {
         let result
         if (!isValidObjectId(req.params.id)) next(createError(400, `ID ${req.params.id} is invalid`))

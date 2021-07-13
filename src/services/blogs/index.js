@@ -5,7 +5,7 @@ import UserModel from "../users/schema.js"
 import mongoose from "mongoose"
 const { isValidObjectId } = mongoose
 import { basicAuthMiddleware } from "../../auth/basic.js"
-import { checkEditPrivileges } from "../../auth/admin.js"
+import { checkPostEditPrivileges } from "../../auth/admin.js"
 import { BlogValidator } from "./validator.js"
 
 const blogsRouter = express.Router()
@@ -53,7 +53,7 @@ blogsRouter.get("/:id", async (req, res, next) => {
     }
 })
 
-blogsRouter.delete("/:id", basicAuthMiddleware, checkEditPrivileges, async (req, res, next) => {
+blogsRouter.delete("/:id", basicAuthMiddleware, checkPostEditPrivileges, async (req, res, next) => {
     try {
         let result
         if (!isValidObjectId(req.params.id)) next(createError(400, `ID ${req.params.id} is invalid`))
@@ -70,7 +70,7 @@ blogsRouter.delete("/:id", basicAuthMiddleware, checkEditPrivileges, async (req,
     }
 })
 
-blogsRouter.put("/:id", basicAuthMiddleware, checkEditPrivileges, async (req, res, next) => {
+blogsRouter.put("/:id", basicAuthMiddleware, checkPostEditPrivileges, async (req, res, next) => {
     try {
         let result
         if (!isValidObjectId(req.params.id)) next(createError(400, `ID ${req.params.id} is invalid`))
