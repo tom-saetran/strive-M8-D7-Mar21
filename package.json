@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/nclBaz/strive-M8-D7-Mar21#readme",
   "dependencies": {
+    "bcrypt": "^5.0.1",
     "cors": "^2.8.5",
     "express": "^4.17.1",
     "express-list-endpoints": "^5.0.0",
