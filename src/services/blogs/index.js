@@ -12,7 +12,7 @@ const blogsRouter = express.Router()
 
 blogsRouter.post("/", basicAuthMiddleware, BlogValidator, async (req, res, next) => {
     try {
-        const entry = new blogModel(req.body)
+        const entry = new BlogModel(req.body)
 
         if (await entry.save()) {
             if (await UserModel.findByIdAndUpdate(entry.author, { $push: { blogs: entry._id } }, { runValidators: true, new: true, useFindAndModify: false }))
