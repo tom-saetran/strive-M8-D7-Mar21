@@ -2,10 +2,11 @@ import express from "express"
 import UserModel from "./schema.js"
 import { basicAuthMiddleware } from "../../auth/basic.js"
 import { adminOnly } from "../../auth/admin.js"
+import { UserValidator } from "./validator.js"
 
 const usersRouter = express.Router()
 
-usersRouter.post("/register", async (req, res, next) => {
+usersRouter.post("/register", UserValidator, async (req, res, next) => {
     try {
         const newUser = new UserModel(req.body)
         const { _id } = await newUser.save()
@@ -15,7 +16,7 @@ usersRouter.post("/register", async (req, res, next) => {
     }
 })
 
-usersRouter.get("/", basicAuthMiddleware, adminOnly, async (req, res, next) => {
+usersRouter.get("/", basicAuthMiddleware, async (req, res, next) => {
     try {
         const users = await UserModel.find()
         res.send(users)
@@ -25,6 +26,14 @@ usersRouter.get("/", basicAuthMiddleware, adminOnly, async (req, res, next) => {
 })
 
 usersRouter.get("/me", basicAuthMiddleware, async (req, res, next) => {
+    try {
+        res.send(req.user)
+    } catch (error) {
+        next(error)
+    }
+})
+
+usersRouter.get("/me/stories", basicAuthMiddleware, async (req, res, next) => {
     try {
         res.send(req.user)
     } catch (error) {
