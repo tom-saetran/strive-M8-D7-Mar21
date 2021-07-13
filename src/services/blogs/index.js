@@ -1,18 +1,24 @@
 import q2m from "query-to-mongo"
 import express from "express"
 import BlogModel from "./schema.js"
-import { isValidObjectId } from "mongoose"
+import UserModel from "../users/schema.js"
+import mongoose from "mongoose"
+const { isValidObjectId } = mongoose
 import { basicAuthMiddleware } from "../../auth/basic.js"
-import { adminOnly, checkEditPrivileges } from "../../auth/admin.js"
+import { checkEditPrivileges } from "../../auth/admin.js"
 import { BlogValidator } from "./validator.js"
 
 const blogsRouter = express.Router()
 
 blogsRouter.post("/", basicAuthMiddleware, BlogValidator, async (req, res, next) => {
     try {
-        const entry = new BlogModel(req.body)
-        const { _id } = await entry.save()
-        res.status(201).send({ _id })
+        const entry = new blogModel(req.body)
+
+        if (await entry.save()) {
+            if (await UserModel.findByIdAndUpdate(entry.author, { $push: { blogs: entry._id } }, { runValidators: true, new: true, useFindAndModify: false }))
+                res.status(201).send(entry._id)
+            else next(createError(400, "Author ID is invalid"))
+        } else next(createError(500, "Error saving data!"))
     } catch (error) {
         next(error)
     }
@@ -27,7 +33,7 @@ blogsRouter.get("/", async (req, res, next) => {
             .sort(query.options.sort)
             .skip(query.options.skip || 0)
             .limit(query.options.limit && query.options.limit < limit ? query.options.limit : limit)
-            .populate("author")
+            .populate("authors")
         res.status(200).send({ links: query.links("/blogs", total), total, result })
     } catch (error) {
         next(error)
@@ -38,7 +44,7 @@ blogsRouter.get("/:id", async (req, res, next) => {
     try {
         let result
         if (!isValidObjectId(req.params.id)) next(createError(400, `ID ${req.params.id} is invalid`))
-        else result = await BlogModel.findById(req.params.id).populate("author").populate("comments.author")
+        else result = await BlogModel.findById(req.params.id).populate("authors")
 
         if (result) res.status(200).send(result)
         else next(createError(404, `ID ${req.params.id} was not found`))
@@ -47,7 +53,7 @@ blogsRouter.get("/:id", async (req, res, next) => {
     }
 })
 
-blogsRouter.delete("/:id", basicAuthMiddleware, async (req, res, next) => {
+blogsRouter.delete("/:id", basicAuthMiddleware, checkEditPrivileges, async (req, res, next) => {
     try {
         let result
         if (!isValidObjectId(req.params.id)) next(createError(400, `ID ${req.params.id} is invalid`))
@@ -64,7 +70,7 @@ blogsRouter.delete("/:id", basicAuthMiddleware, async (req, res, next) => {
     }
 })
 
-blogsRouter.put("/:id", blogValidator, async (req, res, next) => {
+blogsRouter.put("/:id", basicAuthMiddleware, checkEditPrivileges, async (req, res, next) => {
     try {
         let result
         if (!isValidObjectId(req.params.id)) next(createError(400, `ID ${req.params.id} is invalid`))

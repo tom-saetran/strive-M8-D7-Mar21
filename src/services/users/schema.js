@@ -9,7 +9,8 @@ const UserSchema = new Schema(
         surname: { type: String, required: true },
         email: { type: String, required: true, unique: true },
         password: { type: String, required: true },
-        role: { type: String, required: true, enum: ["Admin", "User"], default: "User" }
+        role: { type: String, required: true, enum: ["Admin", "User"], default: "User" },
+        blogs: [{ type: Schema.Types.ObjectId, ref: "Blog", required: true }]
     },
     { timestamps: true }
 )
@@ -23,12 +24,12 @@ UserSchema.pre("save", async function (next) {
 })
 
 UserSchema.methods.toJSON = function () {
-    const user = this
-    const userObject = user.toObject()
-    delete userObject.password
-    delete userObject.__v
+    const schema = this
+    const object = schema.toObject()
+    delete object.password
+    delete object.__v
 
-    return userObject
+    return object
 }
 
 UserSchema.statics.checkCredentials = async function (email, plainPw) {
