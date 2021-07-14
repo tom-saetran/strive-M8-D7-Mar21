@@ -1,13 +1,15 @@
 import q2m from "query-to-mongo"
 import express from "express"
 import UserModel from "./schema.js"
-import { basicAuthMiddleware } from "../../auth/basic.js"
+import createError from "http-errors"
+import { JWTAuthMiddleware } from "../../auth/middlewares.js"
 import { checkUserEditPrivileges } from "../../auth/admin.js"
-import { UserValidator } from "./validator.js"
+import { LoginValidator, UserValidator } from "./validator.js"
+import { refreshTokens } from "../../auth/tools.js"
 
 const usersRouter = express.Router()
 
-usersRouter.post("/register", UserValidator, async (req, res, next) => {
+usersRouter.post("/signup", UserValidator, async (req, res, next) => {
     try {
         const entry = new UserModel(req.body)
         const { _id } = await entry.save()
@@ -17,7 +19,34 @@ usersRouter.post("/register", UserValidator, async (req, res, next) => {
     }
 })
 
-usersRouter.get("/", basicAuthMiddleware, async (req, res, next) => {
+usersRouter.post("/login", LoginValidator, async (req, res, next) => {
+    try {
+        const { email, password } = req.body
+        const user = await UserModel.checkCredentials(email, password)
+
+        if (user) {
+            const { accessToken, refreshToken } = await JWTAuthenticate(user)
+            res.send({ accessToken, refreshToken })
+        } else next(createError(401))
+    } catch (error) {
+        next(error)
+    }
+})
+
+usersRouter.post("/refreshToken", async (req, res, next) => {
+    try {
+        // actual refresh token is coming from req.body
+        if (!req.body.refreshToken) next(createError(400, "Refresh Token not provided"))
+        else {
+            const { newAccessToken, newRefreshToken } = await refreshTokens(req.body.refreshToken)
+            res.send({ newAccessToken, newRefreshToken })
+        }
+    } catch (error) {
+        next(error)
+    }
+})
+
+usersRouter.get("/", JWTAuthMiddleware, async (req, res, next) => {
     try {
         const query = q2m(req.query)
         const total = await UserModel.countDocuments(query.criteria)
@@ -33,7 +62,7 @@ usersRouter.get("/", basicAuthMiddleware, async (req, res, next) => {
     }
 })
 
-usersRouter.get("/me", basicAuthMiddleware, async (req, res, next) => {
+usersRouter.get("/me", JWTAuthMiddleware, async (req, res, next) => {
     try {
         res.send(req.user)
     } catch (error) {
@@ -41,7 +70,7 @@ usersRouter.get("/me", basicAuthMiddleware, async (req, res, next) => {
     }
 })
 
-usersRouter.get("/me/stories", basicAuthMiddleware, async (req, res, next) => {
+usersRouter.get("/me/stories", JWTAuthMiddleware, async (req, res, next) => {
     try {
         const result = await UserModel.findById(req.user._id).populate("blogs")
         res.status(200).send(result.blogs)
@@ -50,7 +79,7 @@ usersRouter.get("/me/stories", basicAuthMiddleware, async (req, res, next) => {
     }
 })
 
-usersRouter.delete("/me", basicAuthMiddleware, async (req, res, next) => {
+usersRouter.delete("/me", JWTAuthMiddleware, async (req, res, next) => {
     try {
         await req.user.deleteOne()
         res.status().send("User terminated")
@@ -59,7 +88,7 @@ usersRouter.delete("/me", basicAuthMiddleware, async (req, res, next) => {
     }
 })
 
-usersRouter.put("/me", basicAuthMiddleware, async (req, res, next) => {
+usersRouter.put("/me", JWTAuthMiddleware, async (req, res, next) => {
     try {
         req.body.name ? (req.user.name = req.body.name) : null
         req.body.surname ? (req.user.surname = req.body.surname) : null
@@ -86,7 +115,7 @@ usersRouter.get("/:id", async (req, res, next) => {
     }
 })
 
-usersRouter.get("/:id/stories", basicAuthMiddleware, async (req, res, next) => {
+usersRouter.get("/:id/stories", JWTAuthMiddleware, async (req, res, next) => {
     try {
         if (!isValidObjectId(req.params.id)) next(createError(400, `ID ${req.params.id} is invalid`))
         else {
@@ -99,7 +128,7 @@ usersRouter.get("/:id/stories", basicAuthMiddleware, async (req, res, next) => {
     }
 })
 
-usersRouter.delete("/:id", basicAuthMiddleware, checkUserEditPrivileges, async (req, res, next) => {
+usersRouter.delete("/:id", JWTAuthMiddleware, checkUserEditPrivileges, async (req, res, next) => {
     try {
         let result
         if (!isValidObjectId(req.params.id)) next(createError(400, `ID ${req.params.id} is invalid`))
@@ -112,7 +141,7 @@ usersRouter.delete("/:id", basicAuthMiddleware, checkUserEditPrivileges, async (
     }
 })
 
-usersRouter.put("/:id", basicAuthMiddleware, checkUserEditPrivileges, async (req, res, next) => {
+usersRouter.put("/:id", JWTAuthMiddleware, checkUserEditPrivileges, async (req, res, next) => {
     try {
         let result
         if (!isValidObjectId(req.params.id)) next(createError(400, `ID ${req.params.id} is invalid`))

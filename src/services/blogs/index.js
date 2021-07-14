@@ -1,16 +1,17 @@
 import q2m from "query-to-mongo"
 import express from "express"
+import createError from "http-errors"
 import BlogModel from "./schema.js"
 import UserModel from "../users/schema.js"
 import mongoose from "mongoose"
 const { isValidObjectId } = mongoose
-import { basicAuthMiddleware } from "../../auth/basic.js"
+import { JWTAuthMiddleware } from "../../auth/middlewares.js"
 import { checkPostEditPrivileges } from "../../auth/admin.js"
 import { BlogValidator } from "./validator.js"
 
 const blogsRouter = express.Router()
 
-blogsRouter.post("/", basicAuthMiddleware, BlogValidator, async (req, res, next) => {
+blogsRouter.post("/", JWTAuthMiddleware, BlogValidator, async (req, res, next) => {
     try {
         const entry = new BlogModel(req.body)
 
@@ -18,7 +19,7 @@ blogsRouter.post("/", basicAuthMiddleware, BlogValidator, async (req, res, next)
             if (await UserModel.findByIdAndUpdate(entry.author, { $push: { blogs: entry._id } }, { runValidators: true, new: true, useFindAndModify: false }))
                 res.status(201).send(entry._id)
             else next(createError(400, "Author ID is invalid"))
-        } else next(createError(500, "Error saving data!"))
+        } else next(createError(500, "Error saving data"))
     } catch (error) {
         next(error)
     }
@@ -53,7 +54,7 @@ blogsRouter.get("/:id", async (req, res, next) => {
     }
 })
 
-blogsRouter.delete("/:id", basicAuthMiddleware, checkPostEditPrivileges, async (req, res, next) => {
+blogsRouter.delete("/:id", JWTAuthMiddleware, checkPostEditPrivileges, async (req, res, next) => {
     try {
         let result
         if (!isValidObjectId(req.params.id)) next(createError(400, `ID ${req.params.id} is invalid`))
@@ -70,7 +71,7 @@ blogsRouter.delete("/:id", basicAuthMiddleware, checkPostEditPrivileges, async (
     }
 })
 
-blogsRouter.put("/:id", basicAuthMiddleware, checkPostEditPrivileges, async (req, res, next) => {
+blogsRouter.put("/:id", JWTAuthMiddleware, checkPostEditPrivileges, async (req, res, next) => {
     try {
         let result
         if (!isValidObjectId(req.params.id)) next(createError(400, `ID ${req.params.id} is invalid`))

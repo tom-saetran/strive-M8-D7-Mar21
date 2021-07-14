@@ -9,5 +9,5 @@ export const forbiddenHandler = (err, req, res, next) => {
 }
 
 export const catchAllHandler = (err, req, res, next) => {
-    res.status(500).send(err)
+    res.status(500).send(err.message)
 }
