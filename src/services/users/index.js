@@ -2,18 +2,24 @@ import q2m from "query-to-mongo"
 import express from "express"
 import UserModel from "./schema.js"
 import createError from "http-errors"
+import { validationResult } from "express-validator"
+import mongoose from "mongoose"
+const { isValidObjectId } = mongoose
 import { JWTAuthMiddleware } from "../../auth/middlewares.js"
 import { checkUserEditPrivileges } from "../../auth/admin.js"
 import { LoginValidator, UserValidator } from "./validator.js"
-import { refreshTokens } from "../../auth/tools.js"
+import { refreshTokens, JWTAuthenticate } from "../../auth/tools.js"
 
 const usersRouter = express.Router()
 
 usersRouter.post("/signup", UserValidator, async (req, res, next) => {
     try {
-        const entry = new UserModel(req.body)
-        const { _id } = await entry.save()
-        res.status(201).send({ _id })
+        const errors = validationResult(req)
+        if (errors.isEmpty()) {
+            const entry = new UserModel(req.body)
+            const { _id } = await entry.save()
+            res.status(201).send({ _id })
+        } else next(createError(400, errors.mapped()))
     } catch (error) {
         next(error)
     }
@@ -21,13 +27,26 @@ usersRouter.post("/signup", UserValidator, async (req, res, next) => {
 
 usersRouter.post("/login", LoginValidator, async (req, res, next) => {
     try {
+        if (!req.body.email) next(createError(400, "Email not provided"))
+        if (!req.body.password) next(createError(400, "Password not provided"))
         const { email, password } = req.body
         const user = await UserModel.checkCredentials(email, password)
 
         if (user) {
             const { accessToken, refreshToken } = await JWTAuthenticate(user)
             res.send({ accessToken, refreshToken })
-        } else next(createError(401))
+        } else next(createError(401, "Wrong credentials"))
+    } catch (error) {
+        next(error)
+    }
+})
+
+usersRouter.post("/logout", JWTAuthMiddleware, async (req, res, next) => {
+    try {
+        const _ = await refreshTokens(req.user.refreshToken) // <= How to invalidate tokens? This does not invalidate the current accessToken
+        req.user.refreshToken = undefined
+        await req.user.save()
+        res.status(205).send("Logged out")
     } catch (error) {
         next(error)
     }
@@ -35,7 +54,6 @@ usersRouter.post("/login", LoginValidator, async (req, res, next) => {
 
 usersRouter.post("/refreshToken", async (req, res, next) => {
     try {
-        // actual refresh token is coming from req.body
         if (!req.body.refreshToken) next(createError(400, "Refresh Token not provided"))
         else {
             const { newAccessToken, newRefreshToken } = await refreshTokens(req.body.refreshToken)

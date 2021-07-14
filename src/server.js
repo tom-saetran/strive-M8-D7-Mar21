@@ -3,7 +3,7 @@ import mongoose from "mongoose"
 import listEndpoints from "express-list-endpoints"
 import usersRoutes from "./services/users/index.js"
 import blogsRoutes from "./services/blogs/index.js"
-import { unAuthorizedHandler, forbiddenHandler, catchAllHandler } from "./errorHandlers.js"
+import { unAuthorizedHandler, forbiddenHandler, catchAllHandler, error400 } from "./errorHandlers.js"
 
 const server = express()
 const port = process.env.PORT || 3001
@@ -16,6 +16,7 @@ server.use("/users", usersRoutes)
 server.use("/blogs", blogsRoutes)
 
 // ERROR HANDLERS
+server.use(error400)
 server.use(unAuthorizedHandler)
 server.use(forbiddenHandler)
 server.use(catchAllHandler)

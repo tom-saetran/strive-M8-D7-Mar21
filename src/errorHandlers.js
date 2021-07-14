@@ -1,3 +1,8 @@
+export const error400 = (err, req, res, next) => {
+    if (err.status === 400) res.status(400).send(err)
+    else next(err)
+}
+
 export const unAuthorizedHandler = (err, req, res, next) => {
     if (err.status === 401) res.status(401).send(err.message || "You are not logged in!")
     else next(err)

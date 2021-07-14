@@ -5,7 +5,7 @@ const { Schema, model } = mongoose
 
 const UserSchema = new Schema(
     {
-        name: { type: String, required: true },
+        firstname: { type: String, required: true },
         surname: { type: String, required: true },
         email: { type: String, required: true, unique: true },
         password: { type: String, required: true },
@@ -19,7 +19,7 @@ const UserSchema = new Schema(
 UserSchema.pre("save", async function (next) {
     const newUser = this
     const plainPw = newUser.password
-    if (newUser.isModified("password")) newUser.password = await bcrypt.hash(plainPw, 10)
+    if (newUser.isModified("password")) newUser.password = await bcrypt.hash(plainPw, 14)
 
     next()
 })
