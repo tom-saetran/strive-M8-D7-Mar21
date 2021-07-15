@@ -28,19 +28,19 @@ usersRouter.post("/signup", UserValidator, async (req, res, next) => {
 
 usersRouter.post("/login", LoginValidator, async (req, res, next) => {
     try {
-        if (!req.body.email) next(createError(400, "Email not provided"))
-        if (!req.body.password) next(createError(400, "Password not provided"))
+        const errors = validationResult(req)
+        if (errors.isEmpty()) {
+            const { email, password } = req.body
+            const user = await UserModel.checkCredentials(email, password)
 
-        const { email, password } = req.body
-        const user = await UserModel.checkCredentials(email, password)
+            if (user) {
+                const { accessToken, refreshToken } = await JWTAuthenticate(user)
 
-        if (user) {
-            const { accessToken, refreshToken } = await JWTAuthenticate(user)
-
-            res.cookie("accessToken", req.user.tokens.accessToken, { httpOnly: true /*sameSite: "lax", secure: true*/ })
-            res.cookie("refreshToken", req.user.tokens.refreshToken, { httpOnly: true /*sameSite: "lax", secure: true*/ })
-            res.status(200).redirect("http://localhost:666/")
-        } else next(createError(401, "Wrong credentials provided"))
+                res.cookie("accessToken", req.user.tokens.accessToken, { httpOnly: true /*sameSite: "lax", secure: true*/ })
+                res.cookie("refreshToken", req.user.tokens.refreshToken, { httpOnly: true /*sameSite: "lax", secure: true*/ })
+                res.status(200).redirect("http://localhost:666/")
+            } else next(createError(401, "Wrong credentials provided"))
+        } else next(createError(400, errors.mapped()))
     } catch (error) {
         next(error)
     }

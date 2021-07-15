@@ -11,15 +11,23 @@ import { BlogValidator } from "./validator.js"
 
 const blogsRouter = express.Router()
 
+const mongoOptions = {
+    runValidators: true,
+    new: true,
+    useFindAndModify: false
+}
+
 blogsRouter.post("/", JWTAuthMiddleware, BlogValidator, async (req, res, next) => {
     try {
-        const entry = new BlogModel(req.body)
+        const errors = validationResult(req)
+        if (errors.isEmpty()) {
+            const entry = new BlogModel(req.body)
 
-        if (await entry.save()) {
-            if (await UserModel.findByIdAndUpdate(entry.author, { $push: { blogs: entry._id } }, { runValidators: true, new: true, useFindAndModify: false }))
-                res.status(201).send(entry._id)
-            else next(createError(400, "Author ID is invalid"))
-        } else next(createError(500, "Error saving data"))
+            if (await entry.save()) {
+                if (await UserModel.findByIdAndUpdate(entry.author, { $push: { blogs: entry._id } }, mongoOptions)) res.status(201).send(entry._id)
+                else next(createError(400, "Author ID is invalid"))
+            } else next(createError(500, "Error saving data"))
+        } else next(createError(400, errors.mapped()))
     } catch (error) {
         next(error)
     }
@@ -75,12 +83,7 @@ blogsRouter.put("/:id", JWTAuthMiddleware, checkPostEditPrivileges, async (req, 
     try {
         let result
         if (!isValidObjectId(req.params.id)) next(createError(400, `ID ${req.params.id} is invalid`))
-        else
-            result = await BlogModel.findByIdAndUpdate(
-                req.params.id,
-                { ...req.body, updatedAt: new Date() },
-                { runValidators: true, new: true, useFindAndModify: false }
-            )
+        else result = await BlogModel.findByIdAndUpdate(req.params.id, { ...req.body, updatedAt: new Date() }, mongoOptions)
 
         if (result) res.status(200).send(result)
         else next(createError(404, `ID ${req.params.id} was not found`))
