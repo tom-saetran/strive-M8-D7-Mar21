@@ -14,16 +14,16 @@ passport.use(
         },
         async (accessToken, refreshToken, profile, next) => {
             try {
-                const user = UserModel.findOne({ googlgeOAuth: profile.id })
+                const user = await UserModel.findOne({ googleOAuth: profile.id })
                 if (user) {
                     const tokens = await JWTAuthenticate(user)
                     next(null, { user, tokens })
                 } else {
                     const newUser = {
-                        name: profile.name.givenName,
+                        firstname: profile.name.givenName,
                         surname: profile.name.familyName,
                         email: profile.emails[0].value,
-                        googleId: profile.id
+                        googleOAuth: profile.id
                     }
 
                     const createdUser = new UserModel(newUser)

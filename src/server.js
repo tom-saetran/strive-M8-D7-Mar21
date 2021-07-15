@@ -1,6 +1,8 @@
+import cors from "cors"
 import express from "express"
 import passport from "passport"
 import oauth from "./auth/oauth.js"
+import cookieParser from "cookie-parser"
 import mongoose from "mongoose"
 import listEndpoints from "express-list-endpoints"
 import usersRoutes from "./services/users/index.js"
@@ -11,7 +13,9 @@ const server = express()
 const port = process.env.PORT || 3001
 
 // MIDDLEWARES
+server.use(cors({ origin: "http://localhost:3000", credentials: true }))
 server.use(express.json())
+server.use(cookieParser())
 server.use(passport.initialize())
 
 // ROUTES

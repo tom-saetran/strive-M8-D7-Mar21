@@ -30,13 +30,17 @@ usersRouter.post("/login", LoginValidator, async (req, res, next) => {
     try {
         if (!req.body.email) next(createError(400, "Email not provided"))
         if (!req.body.password) next(createError(400, "Password not provided"))
+
         const { email, password } = req.body
         const user = await UserModel.checkCredentials(email, password)
 
         if (user) {
             const { accessToken, refreshToken } = await JWTAuthenticate(user)
-            res.send({ accessToken, refreshToken })
-        } else next(createError(401, "Wrong credentials"))
+
+            res.cookie("accessToken", req.user.tokens.accessToken, { httpOnly: true /*sameSite: "lax", secure: true*/ })
+            res.cookie("refreshToken", req.user.tokens.refreshToken, { httpOnly: true /*sameSite: "lax", secure: true*/ })
+            res.status(200).redirect("http://localhost:666/")
+        } else next(createError(401, "Wrong credentials provided"))
     } catch (error) {
         next(error)
     }
@@ -45,8 +49,9 @@ usersRouter.post("/login", LoginValidator, async (req, res, next) => {
 usersRouter.get("/login/oauth/google/login", passport.authenticate("google", { scope: ["profile", "email"] }))
 usersRouter.get("/login/oauth/google/redirect", passport.authenticate("google"), async (req, res, next) => {
     try {
-        console.log(req.user)
-        res.send("OK")
+        res.cookie("accessToken", req.user.tokens.accessToken, { httpOnly: true /*sameSite: "lax", secure: true*/ })
+        res.cookie("refreshToken", req.user.tokens.refreshToken, { httpOnly: true /*sameSite: "lax", secure: true*/ })
+        res.status(200).redirect("http://localhost:666/")
     } catch (error) {
         next(error)
     }
