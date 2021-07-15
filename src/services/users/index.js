@@ -1,5 +1,6 @@
 import q2m from "query-to-mongo"
 import express from "express"
+import passport from "passport"
 import UserModel from "./schema.js"
 import createError from "http-errors"
 import { validationResult } from "express-validator"
@@ -36,6 +37,16 @@ usersRouter.post("/login", LoginValidator, async (req, res, next) => {
             const { accessToken, refreshToken } = await JWTAuthenticate(user)
             res.send({ accessToken, refreshToken })
         } else next(createError(401, "Wrong credentials"))
+    } catch (error) {
+        next(error)
+    }
+})
+
+usersRouter.get("/login/oauth/google/login", passport.authenticate("google", { scope: ["profile", "email"] }))
+usersRouter.get("/login/oauth/google/redirect", passport.authenticate("google"), async (req, res, next) => {
+    try {
+        console.log(req.user)
+        res.send("OK")
     } catch (error) {
         next(error)
     }

@@ -8,10 +8,11 @@ const UserSchema = new Schema(
         firstname: { type: String, required: true },
         surname: { type: String, required: true },
         email: { type: String, required: true, unique: true },
-        password: { type: String, required: true },
+        password: { type: String, required: true, default: "" },
         role: { type: String, required: true, enum: ["Admin", "User"], default: "User" },
         blogs: [{ type: Schema.Types.ObjectId, ref: "Blog", required: true }],
-        refreshToken: { type: String }
+        refreshToken: { type: String },
+        googleOAuth: { type: String }
     },
     { timestamps: true }
 )
